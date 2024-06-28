@@ -70,7 +70,7 @@ app.post('/alerta', upload.single('foto'), (req, res) => {
 
       const foto_url = result.secure_url;
 
-      const query = 'INSERT INTO notificaciones (usuario, tipoAlerta, mensaje, latitud, longitud, foto_url, estado) VALUES (?, ?, ?, ?, ?, ?, "activo")';
+      const query = 'INSERT INTO Alarmas (usuario, tipoAlerta, mensaje, latitud, longitud, foto_url, estado) VALUES (?, ?, ?, ?, ?, ?, "activo")';
       db.query(query, [usuario, tipoAlerta, mensaje, latitud, longitud, foto_url], (err, result) => {
         if (err) {
           console.error('Error ejecutando la consulta:', err);
@@ -89,7 +89,7 @@ app.post('/alerta', upload.single('foto'), (req, res) => {
 });
 
 // Ruta para actualizar una notificación y marcarla como inactiva
-app.put('/notificaciones/:id/inactivar', (req, res) => {
+app.put('/Alarmas/:id/inactivar', (req, res) => {
   const { id } = req.params;
   const { feedback } = req.body;
 
@@ -97,7 +97,7 @@ app.put('/notificaciones/:id/inactivar', (req, res) => {
     return res.status(400).send('Error: ID de notificación no proporcionado.');
   }
 
-  const query = 'UPDATE notificaciones SET estado = "inactivo", feedback = ? WHERE id = ?';
+  const query = 'UPDATE Alarmas SET estado = "inactivo", feedback = ? WHERE id = ?';
 
   db.query(query, [feedback, id], (err, result) => {
     if (err) {
@@ -105,7 +105,7 @@ app.put('/notificaciones/:id/inactivar', (req, res) => {
       return res.status(500).send('Error al actualizar la notificación.');
     }
 
-    const getUpdatedNotificationQuery = 'SELECT estado, feedback FROM notificaciones WHERE id = ?';
+    const getUpdatedNotificationQuery = 'SELECT estado, feedback FROM Alarmas WHERE id = ?';
     db.query(getUpdatedNotificationQuery, [id], (err, results) => {
       if (err) {
         console.error('Error ejecutando la consulta:', err);
@@ -121,10 +121,10 @@ app.put('/notificaciones/:id/inactivar', (req, res) => {
 });
 
 // Ruta para obtener una notificación específica por su ID
-app.get('/notificaciones/:id', (req, res) => {
+app.get('/Alarmas/:id', (req, res) => {
   const { id } = req.params;
 
-  const query = 'SELECT estado, feedback FROM notificaciones WHERE id = ?';
+  const query = 'SELECT estado, feedback FROM Alarmas WHERE id = ?';
   db.query(query, [id], (err, results) => {
     if (err) {
       console.error('Error ejecutando la consulta:', err);
