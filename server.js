@@ -6,6 +6,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const http = require('http');
 const socketIo = require('socket.io');
+const helmet = require('helmet');
 require('dotenv').config(); // Cargar variables de entorno desde .env
 
 const app = express();
@@ -18,7 +19,22 @@ const io = socketIo(server, {
 });
 const port = 3004;
 
-app.use(cors());
+// Configurar helmet con las políticas CSP adecuadas
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "http://server.p3po.dev", "https://server.p3po.dev", "ws://server.p3po.dev", "wss://server.p3po.dev"],
+      // otras directivas CSP según sea necesario
+    },
+  },
+}));
+
+// Configurar CORS para permitir solicitudes desde alarmas.p3po.dev
+app.use(cors({
+  origin: ['https://alarmas.p3po.dev']
+}));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -89,7 +105,7 @@ app.post('/alerta', upload.single('foto'), (req, res) => {
 });
 
 // Ruta para actualizar una notificación y marcarla como inactiva
-app.put('/Alarmas/:id/inactivar', (req, res) => {
+app.put('/notificaciones/:id/inactivar', (req, res) => {
   const { id } = req.params;
   const { feedback } = req.body;
 
@@ -121,7 +137,7 @@ app.put('/Alarmas/:id/inactivar', (req, res) => {
 });
 
 // Ruta para obtener una notificación específica por su ID
-app.get('/Alarmas/:id', (req, res) => {
+app.get('/notificaciones/:id', (req, res) => {
   const { id } = req.params;
 
   const query = 'SELECT estado, feedback FROM Alarmas WHERE id = ?';
@@ -143,4 +159,3 @@ app.get('/Alarmas/:id', (req, res) => {
 server.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
-
