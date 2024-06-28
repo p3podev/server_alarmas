@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2');
-const multer = require('multer');
+const multer = require('multer'); // Importar multer
 const cloudinary = require('cloudinary').v2;
 const http = require('http');
 const socketIo = require('socket.io');
@@ -35,6 +35,9 @@ app.use(cors({
   origin: ['https://alarmas.p3po.dev']
 }));
 
+// Middleware para manejar las solicitudes OPTIONS
+app.options('*', cors());
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -61,8 +64,12 @@ db.connect(err => {
   console.log('Conexión a la base de datos MySQL establecida.');
 });
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// Configuración de Multer para manejar la carga de archivos
+const storage = multer.memoryStorage(); // Almacenar en memoria (puedes cambiar a almacenamiento en disco según tus necesidades)
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // Ajustar el límite de tamaño según sea necesario
+});
 
 // Ruta para recibir datos del formulario y almacenar en la base de datos
 app.post('/alerta', upload.single('foto'), (req, res) => {
