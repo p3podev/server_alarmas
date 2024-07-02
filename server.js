@@ -25,7 +25,6 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: ["'self'", "http://server.p3po.dev", "https://server.p3po.dev", "ws://server.p3po.dev", "wss://server.p3po.dev"],
-      // otras directivas CSP según sea necesario
     },
   },
 }));
@@ -33,8 +32,8 @@ app.use(helmet({
 // Configurar CORS para permitir solicitudes desde alarmas.p3po.dev y dashboard.p3po.dev
 app.use(cors({
   origin: ['https://alarmas.p3po.dev', 'https://dashboard.p3po.dev'],
-  methods: ['GET', 'POST'], // Asegúrate de incluir los métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'] // Especifica los encabezados permitidos
+  methods: ['GET', 'POST', 'PUT', 'OPTIONS'], // Incluye PUT y OPTIONS aquí
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Middleware para manejar las solicitudes OPTIONS
