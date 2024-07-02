@@ -164,6 +164,20 @@ app.get('/notificaciones/:id', (req, res) => {
   });
 });
 
+// Ruta para obtener todas las notificaciones activas
+app.get('/notificaciones', (req, res) => {
+  const query = 'SELECT * FROM Alarmas WHERE estado = "activo"';
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error ejecutando la consulta:', err);
+      return res.status(500).send('Error al obtener las notificaciones.');
+    }
+
+    res.status(200).json(results);
+  });
+});
+
 server.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
+
