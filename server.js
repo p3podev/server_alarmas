@@ -30,9 +30,9 @@ app.use(helmet({
   },
 }));
 
-// Configurar CORS para permitir solicitudes desde alarmas.p3po.dev
+// Configurar CORS para permitir solicitudes desde alarmas.p3po.dev y dashboard.p3po.dev
 app.use(cors({
-  origin: ['https://alarmas.p3po.dev'],
+  origin: ['https://alarmas.p3po.dev', 'https://dashboard.p3po.dev'],
   methods: ['GET', 'POST'], // Asegúrate de incluir los métodos permitidos
   allowedHeaders: ['Content-Type', 'Authorization'] // Especifica los encabezados permitidos
 }));
