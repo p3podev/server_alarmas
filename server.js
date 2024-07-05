@@ -34,7 +34,7 @@ app.use(helmet({
 
 // Configurar CORS para permitir solicitudes desde orígenes permitidos
 app.use(cors({
-  origin: allowedOrigins,
+  origin: '*'/*allowedOrigins*/, //Change on Deploy
   methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
