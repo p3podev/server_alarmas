@@ -2,12 +2,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mysql = require('mysql2');
-const multer = require('multer'); // Importar multer
+const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const http = require('http');
 const socketIo = require('socket.io');
 const helmet = require('helmet');
-require('dotenv').config(); // Cargar variables de entorno desde .env
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -19,24 +19,26 @@ const io = socketIo(server, {
 });
 const port = 3004;
 
+// Leer orígenes permitidos desde variables de entorno
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+
 // Configurar helmet con las políticas CSP adecuadas
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "http://server.p3po.dev", "https://server.p3po.dev", "ws://server.p3po.dev", "wss://server.p3po.dev"],
+      connectSrc: ["'self'", ...allowedOrigins.map(origin => origin.replace(/^https?/, 'ws'))],
     },
   },
 }));
 
-// Configurar CORS para permitir solicitudes desde alarmas.p3po.dev y dashboard.p3po.dev
+// Configurar CORS para permitir solicitudes desde orígenes permitidos
 app.use(cors({
-  origin: ['https://alarmas.p3po.dev', 'https://dashboard.p3po.dev'],
-  methods: ['GET', 'POST', 'PUT', 'OPTIONS'], // Incluye PUT y OPTIONS aquí
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware para manejar las solicitudes OPTIONS
 app.options('*', cors());
 
 app.use(bodyParser.json());
@@ -66,10 +68,10 @@ db.connect(err => {
 });
 
 // Configuración de Multer para manejar la carga de archivos
-const storage = multer.memoryStorage(); // Almacenar en memoria (puedes cambiar a almacenamiento en disco según tus necesidades)
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Ajustar el límite de tamaño según sea necesario
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
 // Ruta para recibir datos del formulario y almacenar en la base de datos
@@ -180,4 +182,3 @@ app.get('/notificaciones', (req, res) => {
 server.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
-
