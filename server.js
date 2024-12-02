@@ -7,6 +7,8 @@ const cloudinary = require('cloudinary').v2;
 const http = require('http');
 const socketIo = require('socket.io');
 const helmet = require('helmet');
+const { exec } = require('child_process'); // Importar exec para ejecutar scripts
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -34,7 +36,7 @@ app.use(helmet({
 
 // Configurar CORS para permitir solicitudes desde orígenes permitidos
 app.use(cors({
-  origin: '*'/*allowedOrigins*/, //Change on Deploy
+  origin: '*'/*allowedOrigins*/, // Change on Deploy
   methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -74,110 +76,81 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Ruta para recibir datos del formulario y almacenar en la base de datos
-app.post('/alerta', upload.single('foto'), (req, res) => {
-  const { usuario, tipoAlerta, mensaje, latitud, longitud } = req.body;
-
-  cloudinary.uploader.upload_stream(
-    {
-      resource_type: 'image',
-      transformation: [
-        { width: 800, height: 600, crop: 'limit' },
-        { quality: 'auto' },
-        { fetch_format: 'auto' }
-      ]
-    },
-    (error, result) => {
-      if (error) {
-        console.error('Error subiendo a Cloudinary:', error);
-        res.status(500).send('Error al subir la imagen.');
-        return;
-      }
-
-      const foto_url = result.secure_url;
-
-      const query = 'INSERT INTO Alarmas (usuario, tipoAlerta, mensaje, latitud, longitud, foto_url, estado) VALUES (?, ?, ?, ?, ?, ?, "activo")';
-      db.query(query, [usuario, tipoAlerta, mensaje, latitud, longitud, foto_url], (err, result) => {
-        if (err) {
-          console.error('Error ejecutando la consulta:', err);
-          res.status(500).send('Error al guardar la alerta.');
-          return;
-        }
-
-        const newAlertId = result.insertId;
-        const newAlert = { id: newAlertId, usuario, tipoAlerta, mensaje, latitud, longitud, foto_url, timestamp: new Date() };
-        io.emit('new-alert', newAlert);
-
-        res.status(200).json({ id: newAlertId, message: 'Alerta guardada exitosamente.', newAlert });
-      });
-    }
-  ).end(req.file.buffer);
-});
-
-// Ruta para actualizar una notificación y marcarla como inactiva
-app.put('/notificaciones/:id/inactivar', (req, res) => {
-  const { id } = req.params;
-  const { feedback } = req.body;
-
-  if (!id) {
-    return res.status(400).send('Error: ID de notificación no proporcionado.');
-  }
-
-  const query = 'UPDATE Alarmas SET estado = "inactivo", feedback = ? WHERE id = ?';
-
-  db.query(query, [feedback, id], (err, result) => {
-    if (err) {
-      console.error('Error ejecutando la consulta:', err);
-      return res.status(500).send('Error al actualizar la notificación.');
-    }
-
-    const getUpdatedNotificationQuery = 'SELECT estado, feedback FROM Alarmas WHERE id = ?';
-    db.query(getUpdatedNotificationQuery, [id], (err, results) => {
-      if (err) {
-        console.error('Error ejecutando la consulta:', err);
-        return res.status(500).send('Error al obtener la notificación actualizada.');
-      }
-
-      const updatedNotification = results[0];
-      io.emit('alert-resolved', updatedNotification);
-
-      res.status(200).send('Notificación actualizada exitosamente.');
-    });
-  });
-});
-
-// Ruta para obtener una notificación específica por su ID
-app.get('/notificaciones/:id', (req, res) => {
-  const { id } = req.params;
-
-  const query = 'SELECT estado, feedback FROM Alarmas WHERE id = ?';
-  db.query(query, [id], (err, results) => {
-    if (err) {
-      console.error('Error ejecutando la consulta:', err);
-      return res.status(500).send('Error al obtener la notificación.');
-    }
-
-    if (results.length === 0) {
-      return res.status(404).send('Notificación no encontrada.');
-    }
-
-    const notification = results[0];
-    res.status(200).json(notification);
-  });
-});
-
-// Ruta para obtener todas las notificaciones activas
-app.get('/notificaciones', (req, res) => {
-  const query = 'SELECT * FROM Alarmas WHERE estado = "activo"';
+// Endpoint para obtener un usuario aleatorio
+app.get('/random-user', (req, res) => {
+  const query = 'SELECT id, username, mail FROM usuarios ORDER BY RAND() LIMIT 1';
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error ejecutando la consulta:', err);
-      return res.status(500).send('Error al obtener las notificaciones.');
+      console.error('Error al obtener usuario aleatorio:', err);
+      return res.status(500).send('Error al obtener usuario aleatorio');
     }
-
-    res.status(200).json(results);
+    if (results.length > 0) {
+      console.log('Usuario aleatorio:', results[0]); // Agregar este log para depuración
+      res.json({
+        id: results[0].id,
+        username: results[0].username,
+        mail: results[0].mail
+      });
+    } else {
+      res.status(404).send('No se encontraron usuarios');
+    }
   });
 });
+
+
+
+// Endpoint para obtener los tipos de alerta
+app.get('/tipo-alerta', (req, res) => {
+  const query = 'SELECT id, descripcion FROM tipo_alerta';
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error al obtener tipos de alerta:', err);
+      return res.status(500).send('Error al obtener tipos de alerta');
+    }
+    res.json(results); // Enviar las descripciones de tipo_alerta al frontend
+  });
+});
+app.post('/create-alert', (req, res) => {
+  const { id_usuario, latitud, longitud } = req.body;
+
+  // Verificar si el id_usuario fue enviado correctamente
+  if (!id_usuario) {
+    return res.status(400).send('ID de usuario es requerido');
+  }
+
+  const id_tipo = 8; // Tipo de alerta predefinido
+  const estado = 'activo'; // Estado predeterminado
+
+  // Insertar nueva alerta
+  const insertQuery = `
+    INSERT INTO alarmas (
+      id_usuario, id_tipo, mensaje, latitud, longitud, foto_url, id_georeferencia, id_sirena, estado, feedback
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const values = [
+    id_usuario,
+    id_tipo,
+    null, // mensaje
+    latitud,
+    longitud,
+    null, // foto_url
+    null, // id_georeferencia
+    null, // id_sirena
+    estado,
+    null, // feedback
+  ];
+
+  db.query(insertQuery, values, (insertErr, insertResults) => {
+    if (insertErr) {
+      console.error('Error al insertar alerta:', insertErr);
+      return res.status(500).send('Error al crear alerta');
+    }
+
+    res.json({ message: 'Alerta creada con éxito', id: insertResults.insertId });
+  });
+});
+
 
 server.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
